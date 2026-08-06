@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Продуктивность</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#14171A;
+    --panel:#1B1F22;
+    --panel-2:#23272A;
+    --ink:#ECEEE8;
+    --ink-soft:#A7ACA2;
+    --ink-faint:#6F756A;
+    --line:#2B302C;
+    --line-strong:#3A4038;
+    --accent:#4FA593;
+    --accent-soft:rgba(79,165,147,0.16);
+    --amber:#D89A4D;
+    --amber-soft:rgba(216,154,77,0.14);
+    --red:#E2695A;
+    --green:#5FBD6B;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(0,0,0,0.35), 0 4px 14px rgba(0,0,0,0.3);
+    font-family:'Inter',sans-serif;
+  }
+  input::placeholder, textarea::placeholder{color:var(--ink-faint);}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);}
+  body{min-height:100vh;}
+  h1,h2,h3,.serif{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  ::selection{background:var(--accent-soft);}
+
+  #app{display:flex;flex-direction:column;min-height:100vh;}
+
+  /* TOPBAR */
+  #topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:20;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:30px;height:30px;border-radius:7px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:15px;}
+  .brand-name{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:0.2px;}
+  .top-stats{display:flex;align-items:center;gap:22px;}
+  .stat-block{display:flex;flex-direction:column;align-items:center;line-height:1.15;}
+  .stat-num{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;}
+  .stat-label{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+  .level-badge{
+    display:flex;align-items:center;gap:8px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line-strong);
+    padding:7px 14px 7px 10px;border-radius:20px;
+  }
+  .level-ring{width:24px;height:24px;border-radius:50%;border:2px solid var(--amber);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--amber);background:var(--amber-soft);}
+  .level-text{display:flex;flex-direction:column;line-height:1.1;}
+  .level-text b{font-size:12.5px;font-weight:500;}
+  .level-text span{font-size:10px;color:var(--ink-faint);}
+  .top-actions{display:flex;gap:8px;align-items:center;}
+  .icon-btn{
+    width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);
+    display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink-soft);
+    transition:background .15s, border-color .15s;
+  }
+  .icon-btn:hover{background:var(--panel-2);border-color:var(--line-strong);}
+
+  /* COLUMNS */
+  #columns{display:flex;flex:1;gap:16px;padding:16px 20px 40px;align-items:flex-start;}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;min-height:70vh;}
+  #col-recurring{flex:1;min-width:0;}
+  #col-regular{flex:1;min-width:0;}
+  #col-center{flex:1.35;min-width:0;}
+
+  .col-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 16px 12px;border-bottom:1px solid var(--line);
+  }
+  .col-title{display:flex;flex-direction:column;gap:2px;}
+  .col-title h2{font-size:16px;margin:0;font-weight:500;}
+  .col-title span{font-size:11.5px;color:var(--ink-faint);}
+  .add-round{
+    width:30px;height:30px;border-radius:50%;border:1px solid var(--line-strong);background:var(--panel);
+    color:var(--ink);font-size:17px;display:flex;align-items:center;justify-content:center;line-height:1;
+    transition:background .15s;
+  }
+  .add-round:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+
+  .col-body{padding:8px 10px 18px;overflow-y:auto;}
+  .empty-state{padding:26px 14px;text-align:center;color:var(--ink-faint);font-size:13px;line-height:1.5;}
+  .empty-state b{color:var(--ink-soft);display:block;font-family:'Fraunces',serif;font-size:14.5px;margin-bottom:4px;font-weight:500;}
+
+  /* TASK ROWS */
+  ul.tree{list-style:none;margin:0;padding:0;}
+  ul.tree ul.tree{margin-left:20px;border-left:1px solid var(--line);padding-left:10px;margin-top:2px;}
+  .task-row{
+    
+	transition:
+        transform .15s,
+        opacity .15s,
+        background .15s;
+
+	display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:7px;
+    position:relative;
+  }
+  .task-row:hover{background:var(--panel-2);}
+  .task-row .add-sub-btn{
+    opacity:0;width:20px;height:20px;border-radius:50%;border:1px solid var(--line-strong);background:var(--panel);
+    font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);flex-shrink:0;
+    transition:opacity .12s;margin-left:auto;
+  }
+  .task-row:hover .add-sub-btn{opacity:1;}
+  .task-row .del-btn{
+    opacity:0;width:20px;height:20px;border-radius:50%;border:none;background:transparent;
+    font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);flex-shrink:0;
+    transition:opacity .12s;
+  }
+  .task-row:hover .del-btn{opacity:1;}
+  .del-btn:hover{color:var(--red);}
+  .chk{
+    width:17px;height:17px;border-radius:5px;border:1.5px solid var(--line-strong);flex-shrink:0;margin-top:1.5px;
+    display:flex;align-items:center;justify-content:center;background:var(--panel);transition:background .12s,border-color .12s;
+  }
+  .chk.done{background:var(--accent);border-color:var(--accent);color:#fff;font-size:11px;}
+  .chk.rec-done{background:var(--amber);border-color:var(--amber);color:#fff;font-size:11px;}
+  .task-main{flex:1;min-width:0;}
+  .task-title{font-size:13.5px;line-height:1.4;word-break:break-word;}
+  .task-title.done{color:var(--ink-faint);text-decoration:line-through;}
+  .task-sub{font-size:10.5px;color:var(--ink-faint);margin-top:1px;}
+
+  /* PROJECT GRID */
+  .proj-tabs{display:flex;gap:4px;padding:12px 16px 0;}
+  .proj-tab{
+    padding:6px 13px;border-radius:20px;border:1px solid transparent;font-size:12.5px;color:var(--ink-soft);
+    background:transparent;
+  }
+  .proj-tab.active{background:var(--ink);color:var(--bg);}
+  .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;padding:16px;}
+  .proj-card{
+    aspect-ratio:4/5;border-radius:12px;overflow:hidden;position:relative;cursor:pointer;
+    background:var(--panel-2);border:3px solid var(--line);display:flex;flex-direction:column;
+    transition:transform .12s;
+  }
+  .proj-card:hover{transform:translateY(-2px);}
+  .proj-img{flex:1;background:var(--panel-2);position:relative;overflow:hidden;}
+  .proj-img img{width:100%;height:100%;object-fit:cover;display:block;}
+  .img-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);font-size:26px;font-family:'Fraunces',serif;}
+  .proj-info{background:rgba(20,23,26,0.9);padding:8px 10px 9px;border-top:1px solid var(--line);}
+  .proj-name{font-size:12.5px;font-weight:500;line-height:1.25;margin-bottom:3px;word-break:break-word;}
+  .proj-pct-row{display:flex;align-items:center;gap:5px;}
+  .proj-pct-bar{flex:1;height:4px;border-radius:3px;background:var(--line);overflow:hidden;}
+  .proj-pct-fill{height:100%;border-radius:3px;}
+  .proj-pct-num{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
+
+  /* PROJECT DETAIL */
+  .detail-head{padding:14px 16px;border-bottom:1px solid var(--line);}
+  .back-btn{
+    display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);
+    border:none;background:none;padding:0 0 10px;
+  }
+  .back-btn:hover{color:var(--ink);}
+  .detail-top{display:flex;align-items:center;gap:12px;}
+  .detail-thumb{width:46px;height:46px;border-radius:8px;background:var(--panel-2);flex-shrink:0;border:1px solid var(--line);position:relative;overflow:hidden;font-family:'Fraunces',serif;color:var(--ink-faint);font-size:16px;}
+  .detail-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .detail-thumb .img-fallback{font-size:16px;}
+  .detail-name{font-family:'Fraunces',serif;font-size:18px;font-weight:500;margin:0 0 2px;}
+  .detail-meta{display:flex;align-items:center;gap:10px;}
+  .detail-pct{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;}
+  .status-select{font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:3px 7px;background:var(--panel);color:var(--ink-soft);}
+  .detail-actions{margin-left:auto;display:flex;gap:8px;}
+
+  /* MODALS */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;
+    z-index:100;padding:20px;
+  }
+  .modal{
+    background:var(--panel);border-radius:14px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;
+    box-shadow:0 12px 40px rgba(0,0,0,0.22);
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px;}
+  .modal-head h3{margin:0;font-size:17px;font-weight:500;}
+  .modal-close{border:none;background:none;font-size:19px;color:var(--ink-faint);}
+  .modal-body{padding:6px 20px 22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;}
+  .field input[type=text], .field input[type=url], .field input[type=number], .field select, .field textarea{
+    width:100%;padding:9px 10px;border-radius:7px;border:1px solid var(--line-strong);background:var(--panel);
+    font-size:13.5px;color:var(--ink);
+  }
+  .field textarea{min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:12px;resize:vertical;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .checkbox-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);margin-bottom:12px;}
+  .btn{padding:9px 16px;border-radius:7px;border:1px solid var(--line-strong);background:var(--panel);font-size:13px;color:var(--ink);}
+  .btn:hover{background:var(--panel-2);}
+  .btn-primary{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .btn-primary:hover{background:#33392F;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+  .hint{font-size:11px;color:var(--ink-faint);margin-top:4px;line-height:1.4;}
+  .tabs-mini{display:flex;gap:6px;margin-bottom:14px;}
+  .tab-mini{flex:1;padding:7px;text-align:center;border-radius:7px;border:1px solid var(--line-strong);font-size:12px;color:var(--ink-soft);background:var(--panel);}
+  .tab-mini.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+
+  /* STATS */
+  .stats-modal{max-width:640px;}
+  .stat-chart-block{margin-bottom:22px;}
+  .stat-chart-block h4{font-size:12.5px;font-weight:500;color:var(--ink-soft);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.04em;}
+  .chart-wrap{position:relative;height:150px;}
+
+  @media (max-width:900px){
+    #columns{flex-direction:column;padding:12px;}
+    .col{min-height:0;}
+    #topbar{padding:12px 14px;flex-wrap:wrap;gap:10px;}
+    .top-stats{gap:14px;}
+    .brand-name{font-size:16px;}
+  }
+  
+  .login-screen {
+
+    position:fixed;
+
+    inset:0;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:#14171A;
+
+}
+
+.login-box {
+
+    width:350px;
+
+    background:#1B1F22;
+
+    border-radius:12px;
+
+    padding:30px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:15px;
+
+}
+
+.edit-btn{
+    opacity:0;
+    width:20px;
+    height:20px;
+    border:none;
+    background:transparent;
+    color:var(--ink-faint);
+}
+
+.task-row:hover .edit-btn{
+    opacity:1;
+}
+
+.edit-btn:hover{
+    color:var(--accent);
+}
+
+.drag-handle{
+
+    width:18px;
+
+    cursor:grab;
+
+    color:var(--ink-faint);
+
+    user-select:none;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:12px;
+
+    flex-shrink:0;
+
+}
+
+.drag-handle:hover{
+
+    color:var(--ink);
+
+}
+
+.drag-handle:active{
+
+    cursor:grabbing;
+
+}
+
+.task-row.dragging{
+
+    opacity:.9;
+
+    transform:scale(1.02);
+
+    box-shadow:0 10px 25px rgba(0,0,0,.35);
+
+    z-index:1000;
+
+}
+
+.task-row.drop-before{
+
+    position:relative;
+
+}
+
+.task-row.drop-before::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:0;
+
+    right:0;
+
+    top:-3px;
+
+    height:4px;
+
+    background:var(--accent);
+
+    border-radius:4px;
+
+}
+
+.task-row.drop-after{
+
+    position:relative;
+
+}
+
+.task-row.drop-after::after{
+
+    content:"";
+
+    position:absolute;
+
+    left:0;
+
+    right:0;
+
+    bottom:-3px;
+
+    height:4px;
+
+    background:var(--accent);
+
+    border-radius:4px;
+
+}
+
+.task-row.drop-indent::before{
+
+    left:34px;
+
+}
+
+.drag-ghost{
+
+    background:var(--bg);
+
+    border-radius:8px;
+
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.35);
+
+}
+
+.task-row::before,
+.task-row::after{
+
+    transition:
+        opacity .12s,
+        transform .12s;
+
+    opacity:0;
+
+}
+
+.drop-before::before,
+.drop-after::after{
+
+    opacity:1;
+
+}
+
+.task-row.drop-indent.drop-after::after {
+    left: 34px;
+}
+</style>
+</head>
+<body>
+<div id="loginScreen" class="login-screen">
+    <div class="login-box">
+        <h2>Продуктивность</h2>
+
+        <input id="loginEmail" placeholder="Email">
+
+        <input
+            id="loginPassword"
+            type="password"
+            placeholder="Пароль">
+
+        <button onclick="login()">
+            Войти
+        </button>
+
+        <div id="loginError"></div>
+    </div>
+</div>
+
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-mark">П</div>
+      <div class="brand-name">Продуктивность</div>
+    </div>
+    <div class="top-stats" id="topStats"></div>
+    <div class="top-actions">
+      <span class="mono" id="syncStatus" style="font-size:10px;color:var(--ink-faint);cursor:pointer;" title="Нажмите, чтобы повторить загрузку" onclick="loadState()"></span>
+      <button class="icon-btn" id="statsBtn" title="Статистика">▤</button>
+    </div>
+  </header>
+  <main id="columns">
+    <section class="col" id="col-recurring"></section>
+    <section class="col col-center" id="col-center"></section>
+    <section class="col" id="col-regular"></section>
+  </main>
+</div>
+<div id="modal-root"></div>
+
+<script>
+const client = window.supabase.createClient(
+    "https://svzehglezazcshnfhcdm.supabase.co",
+    "sb_publishable_lE7_zmmCXUyhPiHVM6AaBg_BTgQX6hL"
+);
+
+/* ---------------- STATE ---------------- */
+let state = { tasks:{}, projects:{}, completions:[] };
+let view = { center:'projects', projectId:null, projectTab:'active' };
+const STORAGE_KEY = 'app-state-v1';
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function monthStr(d){ return d.slice(0,7); }
+function yearStr(d){ return d.slice(0,4); }
+
+function setSyncStatus(text, color){
+  const el = document.getElementById('syncStatus');
+  if(el){ el.textContent = text; el.style.color = color; }
+}
+async function loadState(){
+    const { data, error } = await client
+        .from("app_state")
+        .select("*")
+        .eq("id", "main")
+        .single();
+
+    console.log("data =", data);
+    console.log("error =", error);
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    state = data.data;
+
+    render();
+
+}
+async function saveState(){
+    const { error } = await client
+    .from("app_state")
+    .upsert({
+        id: "main",
+        data: state,
+        updated_at: new Date().toISOString()
+    });
+
+if (error) {
+    console.error(error);
+    setSyncStatus("ошибка", "var(--red)");
+    return;
+}
+
+setSyncStatus("сохранено", "var(--green)");
+}
+let saveTimeout;
+
+let drag = {
+
+    active: false,
+
+    pending: false,
+
+    taskId: null,
+
+    row: null,
+
+    ghost: null,
+
+    dropTarget: null,
+
+    startX: 0,
+    startY: 0,
+
+    offsetX: 0,
+    offsetY: 0,
+	
+	originX: 0,
+
+    currentTarget: null,
+	
+	indent: 0
+};
+
+function persist() {
+
+    render();
+
+    clearTimeout(saveTimeout);
+
+    saveTimeout = setTimeout(async ()=>{
+
+        await saveState(state);
+
+    },800);
+
+}
+/* ---------------- TASK HELPERS ---------------- */
+function childrenOf(id){
+  return Object.values(state.tasks).filter(t=>t.parentId===id).sort((a,b)=>a.order-b.order);
+}
+
+function siblingsOf(task) {
+
+    return Object.values(state.tasks)
+        .filter(t =>
+            t.parentId === task.parentId &&
+            t.projectId === task.projectId &&
+            t.isRecurring === task.isRecurring
+        )
+        .sort((a, b) => a.order - b.order);
+
+}
+
+function normalizeSiblingOrders(parentId, projectId, isRecurring) {
+
+    const siblings = Object.values(state.tasks)
+        .filter(t =>
+            t.parentId === parentId &&
+            t.projectId === projectId &&
+            t.isRecurring === isRecurring
+        )
+        .sort((a, b) => a.order - b.order);
+
+    siblings.forEach((task, index) => {
+
+        task.order = index;
+
+    });
+
+}
+
+function nextSiblingOrder(parentId, projectId, isRecurring) {
+
+    return Object.values(state.tasks)
+        .filter(t =>
+            t.parentId === parentId &&
+            t.projectId === projectId &&
+            t.isRecurring === isRecurring
+        )
+        .length;
+
+}
+
+function rootsRecurring(){
+  return Object.values(state.tasks).filter(t=>t.isRecurring && !t.parentId).sort((a,b)=>a.order-b.order);
+}
+function rootsRegular(){
+  return Object.values(state.tasks).filter(t=>!t.isRecurring && !t.projectId && !t.parentId).sort((a,b)=>a.order-b.order);
+}
+function rootsProject(pid){
+  return Object.values(state.tasks).filter(t=>t.projectId===pid && !t.parentId).sort((a,b)=>a.order-b.order);
+}
+function subtreeIds(rootId){
+  let ids=[rootId];
+  childrenOf(rootId).forEach(c=>{ ids = ids.concat(subtreeIds(c.id)); });
+  return ids;
+}
+function isTreeFullyDone(rootId){
+  return subtreeIds(rootId).every(id=>state.tasks[id].completed);
+}
+function projectAllTasks(pid){
+  return Object.values(state.tasks).filter(t=>t.projectId===pid);
+}
+function projectProgress(pid){
+  const all = projectAllTasks(pid);
+  if(!all.length) return 0;
+  const done = all.filter(t=>t.completed).length;
+  return Math.round(done/all.length*100);
+}
+function progressColor(pct){
+  const hue = Math.max(0,Math.min(120, Math.round((pct/100)*120)));
+  return `hsl(${hue}, 58%, 40%)`;
+}
+
+/* ---------------- COMPLETION LOGIC ---------------- */
+function toggleRecurring(id){
+  const t = state.tasks[id]; const today = todayStr();
+  if(t.lastDate === today){
+    t.lastDate = null;
+    state.completions = state.completions.filter(c=>!(c.taskId===id && c.date===today));
+  } else {
+    t.lastDate = today;
+    state.completions.push({id:uid(), taskId:id, date:today});
+  }
+  persist();
+}
+function toggleTask(id){
+  const t = state.tasks[id]; const today = todayStr();
+  if(t.completed){
+    t.completed = false; t.doneDate = null;
+    for(let i=state.completions.length-1;i>=0;i--){
+      if(state.completions[i].taskId===id){ state.completions.splice(i,1); break; }
+    }
+  } else {
+    t.completed = true; t.doneDate = today;
+    state.completions.push({id:uid(), taskId:id, date:today});
+  }
+  persist();
+}
+function deleteTask(id) {
+
+    const task = state.tasks[id];
+
+    if (!task)
+        return;
+
+    const parentId = task.parentId;
+    const projectId = task.projectId;
+    const isRecurring = task.isRecurring;
+
+    subtreeIds(id).forEach(cid => {
+
+        delete state.tasks[cid];
+
+        state.completions =
+            state.completions.filter(c => c.taskId !== cid);
+
+    });
+
+    normalizeSiblingOrders(
+        parentId,
+        projectId,
+        isRecurring
+    );
+
+    persist();
+
+}
+function deleteProject(pid) {
+
+    // удалить все задачи проекта
+    Object.values(state.tasks)
+        .filter(task => task.projectId === pid)
+        .forEach(task => {
+
+            delete state.tasks[task.id];
+
+            state.completions =
+                state.completions.filter(c => c.taskId !== task.id);
+
+        });
+
+    // удалить сам проект
+    delete state.projects[pid];
+
+    // если сейчас открыт этот проект — выйти к списку
+    if (view.projectId === pid) {
+
+        view.center = "projects";
+        view.projectId = null;
+
+    }
+
+    persist();
+
+}
+function requestDeleteProject(pid) {
+
+    const project = state.projects[pid];
+
+    if (!project)
+        return;
+
+    if (
+        confirm(
+            `Удалить проект «${project.name}» вместе со всеми заданиями?`
+        )
+    ) {
+
+        deleteProject(pid);
+
+        closeModal();
+
+    }
+
+}
+
+/* ---------------- LEVEL / RECORD ---------------- */
+function levelReqs(n){
+  let arr=[]; let base=5;
+  for(let i=0;i<n;i++){ arr.push(Math.max(1,Math.round(base))); base*=1.05; }
+  return arr;
+}
+function calcLevel(total){
+  const reqs = levelReqs(400);
+  let level=1, remaining=total;
+  for(const r of reqs){
+    if(remaining>=r){ remaining-=r; level++; } else break;
+  }
+  return { level, into:remaining, needed: reqs[Math.min(level-1,reqs.length-1)] };
+}
+function recordAndToday(){
+  const today = todayStr();
+  const byDate = {};
+  state.completions.forEach(c=>{ byDate[c.date] = (byDate[c.date]||0)+1; });
+  const todayCount = byDate[today]||0;
+  const values = Object.values(byDate);
+  const record = values.length ? Math.max(...values) : 0;
+  return { todayCount, record, toRecord: Math.max(record-todayCount,0), isRecord: todayCount>0 && todayCount>=record };
+}
+
+/* ---------------- RENDER: TOPBAR ---------------- */
+function renderTopbar(){
+  const totalCompletions = state.completions.length;
+  const lvl = calcLevel(totalCompletions);
+  const rec = recordAndToday();
+  document.getElementById('topStats').innerHTML = `
+    <div class="stat-block">
+      <div class="stat-num">${rec.todayCount}</div>
+      <div class="stat-label">сегодня</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-num">${rec.isRecord ? '★' : rec.toRecord}</div>
+      <div class="stat-label">${rec.isRecord ? 'рекорд!' : 'до рекорда'}</div>
+    </div>
+    <div class="level-badge">
+      <div class="level-ring">${lvl.level}</div>
+      <div class="level-text">
+        <b>Уровень ${lvl.level}</b>
+        <span>${lvl.into}/${lvl.needed} до след.</span>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- RENDER: TASK TREE (generic) ---------------- */
+function renderTree(roots, opts){
+  // opts: {isRecurring, projectId, allowAddSub}
+  if(!roots.length){ return `<div class="empty-state"><b>${opts.emptyTitle}</b>${opts.emptyBody}</div>`; }
+  function renderNode(t){
+    const kids = childrenOf(t.id);
+    const isRec = t.isRecurring;
+    let checkHtml, titleClass='task-title', subHtml='';
+    if(isRec){
+      const doneToday = t.lastDate === todayStr();
+      checkHtml = `<div class="chk ${doneToday?'rec-done':''}" onclick="toggleRecurring('${t.id}')">${doneToday?'✓':''}</div>`;
+      if(t.lastDate) subHtml = `<div class="task-sub">Выполнено: ${t.lastDate}</div>`;
+    } else {
+      checkHtml = `<div class="chk ${t.completed?'done':''}" onclick="toggleTask('${t.id}')">${t.completed?'✓':''}</div>`;
+      if(t.completed) titleClass += ' done';
+    }
+    const rowHtml = `
+      <li>
+        <div class="task-row"
+
+     data-task-id="${t.id}"
+
+     data-parent-id="${t.parentId ?? ""}"
+
+     data-project-id="${t.projectId ?? ""}"
+
+     data-recurring="${t.isRecurring}">
+          ${checkHtml}
+		  <div class="drag-handle"
+		data-task-id="${t.id}">
+		⋮⋮
+		</div>
+          <div class="task-main">
+            <div class="${titleClass}">${escapeHtml(t.title)}</div>
+            ${subHtml}
+          </div>
+          <button class="add-sub-btn" title="Добавить подзадачу" onclick="openAddSubtask('${t.id}')">+</button>
+		  <button class="edit-btn"
+        title="Редактировать"
+        onclick="openEditTaskModal('${t.id}')">
+    ✎
+</button>
+          <button class="del-btn" title="Удалить" onclick="confirmDeleteTask('${t.id}')">×</button>
+        </div>
+        ${kids.length ? `<ul class="tree">${kids.map(renderNode).join('')}</ul>` : ''}
+      </li>`;
+    return rowHtml;
+  }
+  return `<ul class="tree">${roots.map(renderNode).join('')}</ul>`;
+}
+function escapeHtml(s){
+  const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML;
+}
+function confirmDeleteTask(id){
+  const t = state.tasks[id]; if(!t) return;
+  const kids = subtreeIds(id).length-1;
+  const msg = kids>0 ? `Удалить «${t.title}» вместе с ${kids} вложенными заданиями?` : `Удалить «${t.title}»?`;
+  if(confirm(msg)) deleteTask(id);
+}
+function openAddSubtask(parentId){
+  const t = state.tasks[parentId];
+  if(!t) return;
+  openAddTaskModal({ isRecurring: !!t.isRecurring, projectId: t.projectId||null, parentId: t.id });
+}
+
+/* ---------------- RENDER: LEFT (recurring) ---------------- */
+function renderRecurring(){
+  const roots = rootsRecurring();
+  document.getElementById('col-recurring').innerHTML = `
+    <div class="col-head">
+      <div class="col-title"><h2>Повторяющиеся</h2><span>ежедневные задания</span></div>
+      <button class="add-round" onclick="openAddTaskModal({isRecurring:true, projectId:null, parentId:null})">+</button>
+    </div>
+    <div class="col-body">
+      ${renderTree(roots, {emptyTitle:'Пока пусто', emptyBody:'Добавьте задание, которое повторяется каждый день.'})}
+    </div>
+  `;
+}
+
+/* ---------------- RENDER: RIGHT (regular) ---------------- */
+function renderRegular(){
+  const roots = rootsRegular().filter(t=> !isTreeFullyDone(t.id) );
+  document.getElementById('col-regular').innerHTML = `
+    <div class="col-head">
+      <div class="col-title"><h2>Задания</h2><span>разовые дела</span></div>
+      <button class="add-round" onclick="openAddTaskModal({isRecurring:false, projectId:null, parentId:null})">+</button>
+    </div>
+    <div class="col-body">
+      ${renderTree(roots, {emptyTitle:'Список пуст', emptyBody:'Добавьте разовое задание — оно исчезнет отсюда, когда будет выполнено.'})}
+    </div>
+  `;
+}
+
+/* ---------------- RENDER: CENTER (projects) ---------------- */
+function renderCenter(){
+  const el = document.getElementById('col-center');
+  if(view.center==='projects'){
+    const tab = view.projectTab;
+    const all = Object.values(state.projects);
+    const filtered = all.filter(p=>p.status===tab).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    el.innerHTML = `
+      <div class="col-head">
+        <div class="col-title"><h2>Проекты</h2><span>${all.length} всего</span></div>
+        <button class="add-round" onclick="openAddProjectModal()">+</button>
+      </div>
+      <div class="proj-tabs">
+        ${['active','postponed','completed'].map(s=>`
+          <button class="proj-tab ${s===tab?'active':''}" onclick="setProjectTab('${s}')">${statusLabel(s)}</button>
+        `).join('')}
+      </div>
+      <div class="col-body" style="padding-top:4px;">
+        ${filtered.length ? `<div class="proj-grid">${filtered.map(renderProjectCard).join('')}</div>` :
+          `<div class="empty-state"><b>Тут пока пусто</b>${tab==='active' ? 'Создайте первый проект, чтобы начать.' : 'Проекты появятся здесь, когда вы измените их статус.'}</div>`}
+      </div>
+    `;
+  } else {
+    renderProjectDetail(el);
+  }
+}
+function statusLabel(s){ return {active:'Активные', postponed:'Отложенные', completed:'Выполненные'}[s]; }
+function renderProjectCard(p){
+  const pct = projectProgress(p.id);
+  const color = progressColor(pct);
+  return `
+    <div class="proj-card" style="border-color:${color};" onclick="openProject('${p.id}')">
+      <div class="proj-img">${projImgHtml(p)}</div>
+      <div class="proj-info">
+        <div class="proj-name">${escapeHtml(p.name)}</div>
+        <div class="proj-pct-row">
+          <div class="proj-pct-bar"><div class="proj-pct-fill" style="width:${pct}%;background:${color};"></div></div>
+          <div class="proj-pct-num">${pct}%</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initials(name){ return (name||'?').trim().slice(0,1).toUpperCase(); }
+function projImgHtml(project) {
+
+    if (!project.imageUrl) {
+
+        return `<div class="img-fallback">
+            ${initials(project.name)}
+        </div>`;
+
+    }
+
+    return `
+        <img
+            src="${escapeAttr(project.imageUrl)}"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+
+        <div class="img-fallback" style="display:none;">
+            ${initials(project.name)}
+        </div>
+    `;
+
+}
+function escapeAttr(s){ return (s||'').replace(/'/g,"%27").replace(/"/g,'%22'); }
+function setProjectTab(s){ view.projectTab=s; render(); }
+function openProject(pid){ view.center='detail'; view.projectId=pid; render(); }
+function backToProjects(){ view.center='projects'; view.projectId=null; render(); }
+
+function renderProjectDetail(el){
+  const p = state.projects[view.projectId];
+  if(!p){ view.center='projects'; render(); return; }
+  const pct = projectProgress(p.id);
+  const color = progressColor(pct);
+  const roots = rootsProject(p.id);
+  el.innerHTML = `
+    <div class="detail-head">
+      <button class="back-btn" onclick="backToProjects()">← Все проекты</button>
+      <div class="detail-top">
+        <div class="detail-thumb">${projImgHtml(p)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="detail-name">${escapeHtml(p.name)}</div>
+          <div class="detail-meta">
+            <span class="detail-pct" style="color:${color};">${pct}%</span>
+            <select class="status-select" onchange="setProjectStatus('${p.id}', this.value)">
+              <option value="active" ${p.status==='active'?'selected':''}>Активный</option>
+              <option value="postponed" ${p.status==='postponed'?'selected':''}>Отложен</option>
+              <option value="completed" ${p.status==='completed'?'selected':''}>Выполнен</option>
+            </select>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button class="add-round" title="Добавить задание" onclick="openAddTaskModal({isRecurring:false, projectId:'${p.id}', parentId:null})">+</button>
+          <button class="icon-btn" title="Изменить проект" onclick="openEditProjectModal('${p.id}')" style="font-size:13px;">✎</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-body">
+      ${renderTree(roots, {emptyTitle:'Заданий пока нет', emptyBody:'Добавьте первое задание в этот проект.'})}
+    </div>
+  `;
+}
+function setProjectStatus(pid, status){
+  state.projects[pid].status = status;
+  persist();
+}
+
+/* ---------------- MASTER RENDER ---------------- */
+function render(){
+  renderTopbar();
+  renderRecurring();
+  renderRegular();
+  renderCenter();
+  initDragDrop();
+}
+
+/* ---------------- MODAL: ADD TASK ---------------- */
+let addTaskCtx = null;
+function openAddTaskModal(ctx){
+  addTaskCtx = ctx;
+  const groupLabel = ctx.projectId ? 'Задание проекта' : (ctx.isRecurring ? 'Повторяющееся задание' : 'Обычное задание');
+  const parentLabel = ctx.parentId ? `Вложено в: «${escapeHtml(state.tasks[ctx.parentId].title)}»` : 'Без родителя (верхний уровень)';
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <div class="modal-head"><h3>Новое задание</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div class="modal-body">
+          <div class="hint" style="margin-bottom:12px;">${groupLabel} · ${parentLabel}</div>
+          <div class="tabs-mini">
+            <button class="tab-mini active" id="tabSingle" onclick="switchAddTab('single')">Обычная</button>
+            <button class="tab-mini" id="tabBulk" onclick="switchAddTab('bulk')">Несколько</button>
+            <button class="tab-mini" id="tabJson" onclick="switchAddTab('json')">Из JSON</button>
+          </div>
+
+          <div id="paneSingle">
+            <div class="field">
+              <label>Название</label>
+              <input type="text" id="taskTitle" placeholder="Например: разобрать почту">
+            </div>
+          </div>
+
+          <div id="paneBulk" style="display:none;">
+            <div class="field-row">
+              <div class="field">
+                <label>Базовое название</label>
+                <input type="text" id="bulkTitle" placeholder="Например: Проверка">
+              </div>
+              <div class="field" style="max-width:100px;">
+                <label>Количество</label>
+                <input type="number" id="bulkCount" value="5" min="1" max="200">
+              </div>
+            </div>
+            <div class="hint">Создаст «Проверка 1», «Проверка 2» и т.д.</div>
+          </div>
+
+          <div id="paneJson" style="display:none;">
+            <div class="field">
+              <label>JSON дерева заданий</label>
+              <textarea id="jsonInput" placeholder='[{"title":"Раздел 1","children":[{"title":"Подзадача"}]},{"title":"Раздел 2"}]'></textarea>
+            </div>
+            <div class="hint">Массив объектов { "title": "...", "children": [...] }, вложенность любая.</div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Отмена</button>
+            <button class="btn btn-primary" onclick="submitAddTask()">Добавить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('taskTitle').focus();
+}
+let addTab='single';
+function switchAddTab(tab){
+  addTab = tab;
+  document.getElementById('paneSingle').style.display = tab==='single'?'block':'none';
+  document.getElementById('paneBulk').style.display = tab==='bulk'?'block':'none';
+  document.getElementById('paneJson').style.display = tab==='json'?'block':'none';
+  document.getElementById('tabSingle').classList.toggle('active', tab==='single');
+  document.getElementById('tabBulk').classList.toggle('active', tab==='bulk');
+  document.getElementById('tabJson').classList.toggle('active', tab==='json');
+}
+function makeTask(title, ctx, order){
+  return { id:uid(), title, isRecurring:!!ctx.isRecurring, projectId:ctx.projectId||null, parentId:ctx.parentId||null, order, completed:false, doneDate:null, lastDate:null };
+}
+function importTree(nodes, parentId, ctx){
+let order = nextSiblingOrder(
+    parentId,
+    ctx.projectId,
+    ctx.isRecurring
+);
+  nodes.forEach(n => {
+
+    const t = makeTask(
+        n.title || "Без названия",
+        { ...ctx, parentId },
+        order++
+    );
+
+    state.tasks[t.id] = t;
+
+    if (Array.isArray(n.children) && n.children.length) {
+
+        importTree(
+            n.children,
+            t.id,
+            ctx
+        );
+
+    }
+
+});
+}
+function submitAddTask(){
+  const ctx = addTaskCtx;
+  if(addTab==='single'){
+    const title = document.getElementById('taskTitle').value.trim();
+    if(!title){ alert('Введите название задания.'); return; }
+    const order = nextSiblingOrder(
+    ctx.parentId,
+    ctx.projectId,
+    ctx.isRecurring
+);
+
+const t = makeTask(title, ctx, order);
+
+state.tasks[t.id] = t;
+  } else if(addTab==='bulk'){
+    const base = document.getElementById('bulkTitle').value.trim();
+    const count = Math.max(1, parseInt(document.getElementById('bulkCount').value)||1);
+    if(!base){ alert('Введите базовое название.'); return; }
+    let order = nextSiblingOrder(
+    ctx.parentId,
+    ctx.projectId,
+    ctx.isRecurring
+);
+
+for (let i = 1; i <= count; i++) {
+
+    const t = makeTask(
+        `${base} ${i}`,
+        ctx,
+        order++
+    );
+
+    state.tasks[t.id] = t;
+
+}
+
+  } else if(addTab==='json'){
+    const raw = document.getElementById('jsonInput').value.trim();
+    let parsed;
+    try{ parsed = JSON.parse(raw); }catch(e){ alert('Не удалось разобрать JSON: '+e.message); return; }
+    if(!Array.isArray(parsed)){ alert('Ожидается массив заданий в JSON.'); return; }
+    importTree(parsed, ctx.parentId || null, ctx);
+  }
+  closeModal();
+  persist();
+}
+
+/* ---------------- MODAL: ADD/EDIT PROJECT ---------------- */
+let pendingImageData = null;
+function imageFieldHtml(url = "") {
+    return `
+        <div class="field">
+            <label>Ссылка на изображение</label>
+            <input
+                type="url"
+                id="projImg"
+                placeholder="https://..."
+                value="${escapeAttr(url)}">
+        </div>
+    `;
+}
+
+function openAddProjectModal(){
+  pendingImageData = null;
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <div class="modal-head"><h3>Новый проект</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Название</label><input type="text" id="projName" placeholder="Название проекта"></div>
+          ${imageFieldHtml('')}
+          <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">Отмена</button>
+            <button class="btn btn-primary" onclick="submitAddProject()">Создать</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('projName').focus();
+}
+async function submitAddProject() {
+
+    const name =
+        document.getElementById("projName").value.trim();
+
+    if (!name) {
+
+        alert("Введите название проекта.");
+
+        return;
+
+    }
+
+    const imageUrl =
+        document.getElementById("projImg").value.trim();
+
+    const id = uid();
+
+    state.projects[id] = {
+
+        id,
+
+        name,
+
+        imageUrl,
+
+        status: "active"
+
+    };
+
+    closeModal();
+
+    persist();
+
+}
+
+function openEditProjectModal(pid){
+  const p = state.projects[pid];
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal">
+        <div class="modal-head"><h3>Изменить проект</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Название</label><input type="text" id="projName" value="${escapeAttr(p.name)}"></div>
+          ${imageFieldHtml(p.imageUrl || '')}
+          <div class="modal-actions">
+            <button class="btn" style="color:var(--red);border-color:var(--red);" onclick="requestDeleteProject('${pid}')">Удалить проект</button>
+            <button class="btn" onclick="closeModal()">Отмена</button>
+            <button class="btn btn-primary" onclick="submitEditProject('${pid}')">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+async function submitEditProject(pid) {
+
+    const project = state.projects[pid];
+
+    project.name =
+        document.getElementById("projName").value.trim();
+
+    project.imageUrl =
+        document.getElementById("projImg").value.trim();
+
+    closeModal();
+
+    persist();
+
+}
+
+function openEditTaskModal(taskId) {
+
+    const task = state.tasks[taskId];
+
+    if (!task)
+        return;
+
+    document.getElementById("modal-root").innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+            <div class="modal">
+                <div class="modal-head">
+                    <h3>Редактировать задание</h3>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="field">
+                        <label>Название</label>
+                        <input
+                            type="text"
+                            id="editTaskTitle"
+                            value="${escapeAttr(task.title)}">
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn" onclick="closeModal()">
+                            Отмена
+                        </button>
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="submitEditTask('${taskId}')">
+                            Сохранить
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("editTaskTitle").focus();
+    document.getElementById("editTaskTitle").select();
+
+}
+
+function submitEditTask(taskId) {
+
+    const task = state.tasks[taskId];
+
+    if (!task)
+        return;
+
+    const title =
+        document.getElementById("editTaskTitle").value.trim();
+
+    if (!title) {
+
+        alert("Введите название задания.");
+
+        return;
+
+    }
+
+    task.title = title;
+
+    closeModal();
+
+    persist();
+
+}
+
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+/* ---------------- STATS ---------------- */
+let charts = {};
+function openStats(){
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal stats-modal" onclick="event.stopPropagation()">
+        <div class="modal-head"><h3>Статистика</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div class="modal-body">
+          <div class="stat-chart-block"><h4>По дням (последние 30)</h4><div class="chart-wrap"><canvas id="chartDay"></canvas></div></div>
+          <div class="stat-chart-block"><h4>По месяцам (последние 12)</h4><div class="chart-wrap"><canvas id="chartMonth"></canvas></div></div>
+          <div class="stat-chart-block"><h4>По годам</h4><div class="chart-wrap"><canvas id="chartYear"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  `;
+  buildStatsCharts();
+}
+function buildStatsCharts(){
+  if(typeof Chart==='undefined'){ return; }
+  const byDay={}, byMonth={}, byYear={};
+  state.completions.forEach(c=>{
+    byDay[c.date]=(byDay[c.date]||0)+1;
+    const m=monthStr(c.date); byMonth[m]=(byMonth[m]||0)+1;
+    const y=yearStr(c.date); byYear[y]=(byYear[y]||0)+1;
+  });
+  const days=[]; const today=new Date();
+  for(let i=29;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i); days.push(d.toISOString().slice(0,10)); }
+  const months=[]; for(let i=11;i>=0;i--){ const d=new Date(today.getFullYear(), today.getMonth()-i, 1); months.push(d.toISOString().slice(0,7)); }
+  const years = Object.keys(byYear).sort();
+  const finalYears = years.length ? years : [yearStr(todayStr())];
+
+  const opts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{ y:{beginAtZero:true, ticks:{precision:0, color:'#9AA095'}, grid:{color:'rgba(255,255,255,0.06)'}}, x:{ticks:{color:'#9AA095'}, grid:{display:false}} }
+  };
+  charts.day = new Chart(document.getElementById('chartDay'), {
+    type:'bar',
+    data:{ labels: days.map(d=>d.slice(5)), datasets:[{ data: days.map(d=>byDay[d]||0), backgroundColor:'#4FA593', borderRadius:3 }] },
+    options: opts
+  });
+  charts.month = new Chart(document.getElementById('chartMonth'), {
+    type:'bar',
+    data:{ labels: months, datasets:[{ data: months.map(m=>byMonth[m]||0), backgroundColor:'#D89A4D', borderRadius:3 }] },
+    options: opts
+  });
+  charts.year = new Chart(document.getElementById('chartYear'), {
+    type:'bar',
+    data:{ labels: finalYears, datasets:[{ data: finalYears.map(y=>byYear[y]||0), backgroundColor:'#9AA095', borderRadius:3 }] },
+    options: opts
+  });
+}
+
+document.getElementById('statsBtn').addEventListener('click', openStats);
+
+/* ---------------- INIT ---------------- */
+window.addEventListener("DOMContentLoaded", () => {
+    init();
+});
+
+async function init() {
+
+    const {
+        data: { session }
+    } = await client.auth.getSession();
+
+    if (session) {
+
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("app").style.display = "flex";
+
+        await loadState();
+
+    } else {
+
+        document.getElementById("loginScreen").style.display = "flex";
+        document.getElementById("app").style.display = "none";
+
+    }
+
+}
+
+async function login() {
+
+    const email =
+        document.getElementById("loginEmail").value;
+
+    const password =
+        document.getElementById("loginPassword").value;
+
+    const { error } =
+        await client.auth.signInWithPassword({
+
+            email,
+            password
+
+        });
+
+    if (error) {
+
+        document.getElementById("loginError").textContent =
+            error.message;
+
+        return;
+
+    }
+
+    init();
+}
+
+function initDragDrop() {
+
+    document.querySelectorAll(".drag-handle")
+        .forEach(handle => {
+
+            handle.addEventListener("pointerdown", startDrag);
+
+        });
+
+}
+
+function startDrag(e){
+
+    e.preventDefault();
+
+    const row = e.currentTarget.closest(".task-row");
+	
+	if (!row || row === drag.ghost)
+    return;
+
+    drag.pending = true;
+
+    drag.active = false;
+
+    drag.row = row;
+
+    drag.taskId = row.dataset.taskId;
+
+    drag.startX = e.clientX;
+
+    drag.startY = e.clientY;
+
+    window.addEventListener("pointermove", dragMove);
+
+    window.addEventListener("pointerup", dragEnd);
+
+}
+
+function dragMove(e){
+const dx = e.clientX - drag.startX;
+
+const dy = e.clientY - drag.startY;
+
+if(drag.pending){
+
+    if(Math.hypot(dx,dy)<6)
+        return;
+
+    beginRealDrag(e);
+
+}
+
+    if(!drag.active)
+        return;
+
+	const deltaX = e.clientX - drag.originX;
+
+drag.indent = 0;
+
+if (deltaX > 40)
+    drag.indent = 1;
+
+if (deltaX < -40)
+    drag.indent = -1;	
+
+    drag.ghost.style.left =
+    (
+        e.clientX -
+        drag.offsetX +
+        drag.indent*24
+    ) + "px";
+
+    drag.ghost.style.top =
+        (e.clientY-drag.offsetY)+"px";
+
+const row = document
+    .elementFromPoint(e.clientX, e.clientY)
+    ?.closest(".task-row");
+
+if (!row)
+    return;
+
+if (row === drag.row)
+    return;
+
+if (!isSameLevel(drag.row, row))
+    return;
+
+updatePlaceholder(row, e.clientY);
+
+const edge = 80;
+const speed = 15;
+
+if (e.clientY < edge) {
+
+    window.scrollBy(0, -speed);
+
+} else if (e.clientY > window.innerHeight - edge) {
+
+    window.scrollBy(0, speed);
+
+}
+}
+
+function dragEnd() {
+
+    window.removeEventListener("pointermove", dragMove);
+    window.removeEventListener("pointerup", dragEnd);
+
+    // Если пользователь просто кликнул по ручке,
+    // а не начал перетаскивание
+    if (drag.pending) {
+
+        drag.pending = false;
+        drag.row = null;
+        drag.taskId = null;
+
+        return;
+
+    }
+
+    if (!drag.active)
+        return;
+
+    // если была цель для вставки
+    if (drag.currentTarget) {
+
+        moveTask(
+            drag.taskId,
+            drag.currentTarget.targetId,
+            drag.currentTarget.before
+        );
+
+    }
+
+    drag.row.classList.remove("dragging");
+    drag.row.style.visibility = "";
+
+    if (drag.ghost)
+        drag.ghost.remove();
+
+    if (drag.dropTarget) {
+
+        drag.dropTarget.classList.remove(
+            "drop-before",
+            "drop-after",
+            "drop-indent"
+        );
+
+    }
+
+    persist();
+
+    drag.active = false;
+    drag.pending = false;
+
+    drag.row = null;
+    drag.taskId = null;
+    drag.ghost = null;
+    drag.dropTarget = null;
+    drag.currentTarget = null;
+    drag.indent = 0;
+
+}
+
+function beginRealDrag(e){
+
+    drag.pending = false;
+
+    drag.active = true;
+
+    drag.row.classList.add("dragging");
+
+	drag.row.style.visibility = "hidden";
+
+    const rect =
+        drag.row.getBoundingClientRect();
+
+    drag.offsetX =
+        e.clientX-rect.left;
+		
+	drag.originX = e.clientX;
+
+    drag.offsetY =
+        e.clientY-rect.top;
+
+    drag.ghost =
+        drag.row.cloneNode(true);
+		
+	drag.ghost.classList.add("drag-ghost");
+
+    drag.ghost.style.position="fixed";
+
+    drag.ghost.style.left=
+        rect.left+"px";
+
+    drag.ghost.style.top=
+        rect.top+"px";
+
+    drag.ghost.style.width=
+        rect.width+"px";
+
+    drag.ghost.style.pointerEvents="none";
+
+    drag.ghost.style.zIndex=99999;
+
+    drag.ghost.style.opacity=".95";
+
+    drag.ghost.style.transform="scale(1.03)";
+
+    document.body.appendChild(drag.ghost);
+
+}
+
+function updatePlaceholder(row, mouseY){
+
+    if (drag.dropTarget) {
+
+        drag.dropTarget.classList.remove(
+            "drop-before",
+            "drop-after",
+            "drop-indent"
+        );
+    }
+
+    drag.dropTarget = row;
+
+    const rect = row.getBoundingClientRect();
+
+    const before = mouseY < rect.top + rect.height / 2;
+
+    if (before) {
+
+        row.classList.add("drop-before");
+
+    } else {
+
+        row.classList.add("drop-after");
+
+    }
+
+    row.classList.toggle(
+        "drop-indent",
+        drag.indent === 1
+    );
+
+    drag.currentTarget = {
+        targetId: row.dataset.taskId,
+        before,
+        indent: drag.indent
+    };
+
+}
+
+function moveTask(draggedId, targetId, before) {
+
+    if (draggedId === targetId)
+        return;
+
+    const dragged = state.tasks[draggedId];
+    const target = state.tasks[targetId];
+
+    if (!dragged || !target)
+        return;
+
+    const siblings = Object.values(state.tasks)
+        .filter(t =>
+            t.parentId === dragged.parentId &&
+            t.projectId === dragged.projectId &&
+            t.isRecurring === dragged.isRecurring
+        )
+        .sort((a, b) => a.order - b.order);
+
+    const draggedIndex =
+        siblings.findIndex(t => t.id === draggedId);
+
+    if (draggedIndex === -1)
+        return;
+
+    // Удаляем перетаскиваемую задачу
+    const [item] = siblings.splice(draggedIndex, 1);
+
+    // И только теперь ищем цель
+    let targetIndex =
+        siblings.findIndex(t => t.id === targetId);
+
+    if (targetIndex === -1)
+        targetIndex = siblings.length;
+
+    if (!before)
+        targetIndex++;
+
+    siblings.splice(targetIndex, 0, item);
+
+    siblings.forEach((task, index) => {
+        task.order = index;
+    });
+
+}
+
+function isSameLevel(rowA, rowB) {
+
+    return (
+        rowA.dataset.parentId === rowB.dataset.parentId &&
+        rowA.dataset.projectId === rowB.dataset.projectId &&
+        rowA.dataset.recurring === rowB.dataset.recurring
+    );
+
+}
+
+function isDescendant(parentId, childId){
+
+    while(childId){
+
+        if(childId===parentId)
+            return true;
+
+        childId=state.tasks[childId]?.parentId;
+
+    }
+
+    return false;
+
+}
+</script>
+</body>
+</html>
