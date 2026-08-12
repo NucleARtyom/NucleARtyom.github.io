@@ -1486,15 +1486,10 @@
     function renderTopbar() {
         const totalCompletions = state.completions.length;
         const lvl = calcLevel(totalCompletions);
-        const rec = recordAndToday();
         document.getElementById('topStats').innerHTML = `
     <div class="stat-block">
-      <div class="stat-num">${rec.todayCount}</div>
-      <div class="stat-label">сегодня</div>
-    </div>
-    <div class="stat-block">
-      <div class="stat-num">${rec.isRecord ? '★' : rec.toRecord}</div>
-      <div class="stat-label">${rec.isRecord ? 'рекорд!' : 'до рекорда'}</div>
+      <div class="stat-num">${totalCompletions}</div>
+      <div class="stat-label">всего выполнено</div>
     </div>
     <div class="level-badge">
       <div class="level-ring">${lvl.level}</div>
