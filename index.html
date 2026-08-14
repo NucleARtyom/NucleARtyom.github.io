@@ -1116,6 +1116,34 @@
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
+    function isTaskDone(t) {
+
+        if (t.isRecurring) {
+            return t.lastDate === todayStr();
+        }
+
+        return !!t.completed;
+    }
+
+    function sortTasks(tasks) {
+
+        return tasks.sort((a, b) => {
+
+            const aDone = isTaskDone(a);
+            const bDone = isTaskDone(b);
+
+            // Невыполненные всегда выше выполненных
+            if (aDone !== bDone) {
+                return aDone ? 1 : -1;
+            }
+
+            // Внутри каждой группы сохраняем исходный порядок
+            return a.order - b.order;
+
+        });
+
+    }
+
     function todayStr() {
         return new Date().toISOString().slice(0, 10);
     }
@@ -1227,7 +1255,12 @@
 
     /* ---------------- TASK HELPERS ---------------- */
     function childrenOf(id) {
-        return Object.values(state.tasks).filter(t => t.parentId === id).sort((a, b) => a.order - b.order);
+
+        return sortTasks(
+            Object.values(state.tasks)
+                .filter(t => t.parentId === id)
+        );
+
     }
 
     function siblingsOf(task) {
@@ -1273,15 +1306,37 @@
     }
 
     function rootsRecurring() {
-        return Object.values(state.tasks).filter(t => t.isRecurring && !t.parentId).sort((a, b) => a.order - b.order);
+
+        return sortTasks(
+            Object.values(state.tasks)
+                .filter(t => t.isRecurring && !t.parentId)
+        );
+
     }
 
     function rootsRegular() {
-        return Object.values(state.tasks).filter(t => !t.isRecurring && !t.projectId && !t.parentId).sort((a, b) => a.order - b.order);
+
+        return sortTasks(
+            Object.values(state.tasks)
+                .filter(t =>
+                    !t.isRecurring &&
+                    !t.projectId &&
+                    !t.parentId
+                )
+        );
+
     }
 
     function rootsProject(pid) {
-        return Object.values(state.tasks).filter(t => t.projectId === pid && !t.parentId).sort((a, b) => a.order - b.order);
+
+        return sortTasks(
+            Object.values(state.tasks)
+                .filter(t =>
+                    t.projectId === pid &&
+                    !t.parentId
+                )
+        );
+
     }
 
     function subtreeIds(rootId) {
