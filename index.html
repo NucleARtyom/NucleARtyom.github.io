@@ -1021,39 +1021,39 @@
             left: 34px;
         }
 
-        .collapse-toggle{
+        .collapse-toggle {
 
-            width:16px;
+            width: 16px;
 
-            flex-shrink:0;
+            flex-shrink: 0;
 
-            display:flex;
+            display: flex;
 
-            justify-content:center;
+            justify-content: center;
 
-            align-items:center;
+            align-items: center;
 
-            color:var(--ink-faint);
+            color: var(--ink-faint);
 
-            cursor:pointer;
+            cursor: pointer;
 
-            user-select:none;
+            user-select: none;
 
-            font-size:11px;
+            font-size: 11px;
 
-            transition:.12s;
-
-        }
-
-        .collapse-toggle:hover{
-
-            color:var(--ink);
+            transition: .12s;
 
         }
 
-        .collapse-toggle.empty{
+        .collapse-toggle:hover {
 
-            visibility:hidden;
+            color: var(--ink);
+
+        }
+
+        .collapse-toggle.empty {
+
+            visibility: hidden;
 
         }
     </style>
@@ -1807,7 +1807,10 @@
             <button class="tab-mini" id="tabBulk" onclick="switchAddTab('bulk')">Несколько</button>
             <button class="tab-mini" id="tabJson" onclick="switchAddTab('json')">Из JSON</button>
           </div>
-
+<div class="checkbox-line">
+    <input type="checkbox" id="taskCompleted">
+    <label for="taskCompleted">Добавить выполненным</label>
+</div>
           <div id="paneSingle">
             <div class="field">
               <label>Название</label>
@@ -1860,17 +1863,28 @@
         document.getElementById('tabJson').classList.toggle('active', tab === 'json');
     }
 
-    function makeTask(title, ctx, order) {
+    function makeTask(title, ctx, order, completed = false) {
+
+        const isRecurring = !!ctx.isRecurring;
+
         return {
             id: uid(),
             title,
-            isRecurring: !!ctx.isRecurring,
+            isRecurring,
             projectId: ctx.projectId || null,
             parentId: ctx.parentId || null,
             order,
-            completed: false,
-            doneDate: null,
-            lastDate: null,
+
+            completed: isRecurring ? false : completed,
+
+            doneDate: !isRecurring && completed
+                ? todayStr()
+                : null,
+
+            lastDate: isRecurring && completed
+                ? todayStr()
+                : null,
+
             collapsed: true
         };
     }
@@ -1912,13 +1926,27 @@
                 alert('Введите название задания.');
                 return;
             }
+
             const order = nextSiblingOrder(
                 ctx.parentId,
                 ctx.projectId,
                 ctx.isRecurring
             );
 
-            const t = makeTask(title, ctx, order);
+            const completed =
+                document.getElementById('taskCompleted').checked;
+
+            const t = makeTask(title, ctx, order, completed);
+
+            if (completed) {
+
+                state.completions.push({
+                    id: uid(),
+                    taskId: t.id,
+                    date: todayStr()
+                });
+
+            }
 
             state.tasks[t.id] = t;
         } else if (addTab === 'bulk') {
@@ -1934,16 +1962,29 @@
                 ctx.isRecurring
             );
 
+            const completed =
+                document.getElementById('taskCompleted').checked;
+
             for (let i = 1; i <= count; i++) {
 
                 const t = makeTask(
                     `${base} ${i}`,
                     ctx,
-                    order++
+                    order++,
+                    completed
                 );
 
                 state.tasks[t.id] = t;
 
+                if (completed) {
+
+                    state.completions.push({
+                        id: uid(),
+                        taskId: t.id,
+                        date: todayStr()
+                    });
+
+                }
             }
 
         } else if (addTab === 'json') {
