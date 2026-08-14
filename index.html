@@ -1793,6 +1793,7 @@
 
     function openAddTaskModal(ctx) {
         addTaskCtx = ctx;
+        addTab = 'single';
         const groupLabel = ctx.projectId ? 'Задание проекта' : (ctx.isRecurring ? 'Повторяющееся задание' : 'Обычное задание');
         const parentLabel = ctx.parentId ? `Вложено в: «${escapeHtml(state.tasks[ctx.parentId].title)}»` : 'Без родителя (верхний уровень)';
         document.getElementById('modal-root').innerHTML = `
