@@ -1109,6 +1109,7 @@
 
     /* ---------------- STATE ---------------- */
     let state = {tasks: {}, projects: {}, completions: []};
+    let stateVersion = 0;
     let view = {center: 'projects', projectId: null, projectTab: 'active'};
     const STORAGE_KEY = 'app-state-v1';
 
@@ -1181,6 +1182,8 @@
 
         state = data.data;
 
+        stateVersion = data.version;
+
         Object.values(state.tasks).forEach(task => {
 
             if (task.collapsed === undefined)
@@ -1193,21 +1196,52 @@
     }
 
     async function saveState() {
+        const oldVersion = stateVersion;
+        const newVersion = oldVersion + 1;
+
         const {error} = await client
             .from("app_state")
             .upsert({
-                id: "main",
                 data: state,
+                version: newVersion,
                 updated_at: new Date().toISOString()
-            });
+            })
+            .eq("id", "main")
+            .eq("version", oldVersion)
+            .select("version")
+            .maybeSingle();
 
         if (error) {
             console.error(error);
             setSyncStatus("ошибка", "var(--red)");
-            return;
+            return false;
         }
 
-        setSyncStatus("сохранено", "var(--green)");
+        // Если строка не обновилась,
+        // значит версия уже изменилась на сервере.
+        if (!data) {
+
+            setSyncStatus(
+                "конфликт",
+                "var(--red)"
+            );
+
+            console.warn(
+                "Конфликт версий: состояние на сервере уже изменилось."
+            );
+
+            return false;
+
+        }
+
+        stateVersion = newVersion;
+
+        setSyncStatus(
+            "сохранено",
+            "var(--green)"
+        );
+
+        return true;
     }
 
     let saveTimeout;
@@ -1247,7 +1281,7 @@
 
         saveTimeout = setTimeout(async () => {
 
-            await saveState(state);
+            await saveState();
 
         }, 800);
 
