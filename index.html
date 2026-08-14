@@ -1196,12 +1196,13 @@
     }
 
     async function saveState() {
+
         const oldVersion = stateVersion;
         const newVersion = oldVersion + 1;
 
-        const {error} = await client
+        const { data, error } = await client
             .from("app_state")
-            .upsert({
+            .update({
                 data: state,
                 version: newVersion,
                 updated_at: new Date().toISOString()
@@ -1212,29 +1213,36 @@
             .maybeSingle();
 
         if (error) {
-            console.error(error);
-            setSyncStatus("ошибка", "var(--red)");
+
+            console.error("Ошибка сохранения:", error);
+
+            setSyncStatus(
+                "ошибка",
+                "var(--red)"
+            );
+
             return false;
         }
 
-        // Если строка не обновилась,
-        // значит версия уже изменилась на сервере.
+        // UPDATE не нашёл строку с нужной версией.
+        // Значит, другой клиент уже изменил состояние.
         if (!data) {
+
+            console.warn(
+                "Конфликт версий: данные на сервере уже изменились."
+            );
 
             setSyncStatus(
                 "конфликт",
                 "var(--red)"
             );
 
-            console.warn(
-                "Конфликт версий: состояние на сервере уже изменилось."
-            );
+            showConflictModal();
 
             return false;
-
         }
 
-        stateVersion = newVersion;
+        stateVersion = data.version;
 
         setSyncStatus(
             "сохранено",
@@ -2319,6 +2327,60 @@
 
     function closeModal() {
         document.getElementById('modal-root').innerHTML = '';
+    }
+
+    function showConflictModal() {
+
+        document.getElementById('modal-root').innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+            <div class="modal" onclick="event.stopPropagation()">
+
+                <div class="modal-head">
+                    <h3>Конфликт данных</h3>
+                </div>
+
+                <div class="modal-body">
+
+                    <p style="
+                        margin: 0 0 14px;
+                        font-size: 13.5px;
+                        line-height: 1.5;
+                        color: var(--ink-soft);
+                    ">
+                        Данные были изменены на другом устройстве.
+                        Ваши изменения не были сохранены, чтобы
+                        не перезаписать более новые данные.
+                    </p>
+
+                    <div class="modal-actions">
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="reloadAfterConflict()">
+                            Загрузить актуальные данные
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    }
+
+    async function reloadAfterConflict() {
+
+        closeModal();
+
+        setSyncStatus(
+            "загрузка...",
+            "var(--ink-faint)"
+        );
+
+        await loadState();
+
     }
 
     /* ---------------- STATS ---------------- */
