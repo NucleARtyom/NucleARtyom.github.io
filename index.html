@@ -1789,6 +1789,8 @@
     /* ---------------- MODAL: ADD TASK ---------------- */
     let addTaskCtx = null;
 
+    let modalPointerStartedInside = false;
+
     function openAddTaskModal(ctx) {
         addTaskCtx = ctx;
         const groupLabel = ctx.projectId ? 'Задание проекта' : (ctx.isRecurring ? 'Повторяющееся задание' : 'Обычное задание');
@@ -2142,6 +2144,47 @@
         persist();
 
     }
+
+    document.addEventListener("pointerdown", (event) => {
+
+        const overlay = event.target.closest(".modal-overlay");
+
+        if (!overlay) {
+            modalPointerStartedInside = false;
+            return;
+        }
+
+        modalPointerStartedInside =
+            !!event.target.closest(".modal");
+
+    });
+
+    document.addEventListener("click", (event) => {
+
+        const overlay = event.target.closest(".modal-overlay");
+
+        if (!overlay)
+            return;
+
+        // Клик произошёл на самом overlay,
+        // но pointerdown изначально был внутри modal.
+        //
+        // Это как раз случай выделения текста,
+        // когда пользователь начал тянуть внутри input/textarea
+        // и отпустил кнопку мыши за пределами modal.
+        if (
+            event.target === overlay &&
+            modalPointerStartedInside
+        ) {
+
+            event.stopPropagation();
+            event.preventDefault();
+
+        }
+
+        modalPointerStartedInside = false;
+
+    }, true);
 
     function closeModal() {
         document.getElementById('modal-root').innerHTML = '';
