@@ -1336,15 +1336,17 @@
     }
 
     function nextSiblingOrder(parentId, projectId, isRecurring) {
-
         return Object.values(state.tasks)
             .filter(t =>
-                t.parentId === parentId &&
-                t.projectId === projectId &&
+                sameNullable(t.parentId, parentId) &&
+                sameNullable(t.projectId, projectId) &&
                 t.isRecurring === isRecurring
             )
             .length;
+    }
 
+    function sameNullable(a, b) {
+        return (a ?? null) === (b ?? null);
     }
 
     function rootsRecurring() {
@@ -2028,6 +2030,27 @@
                 ctx.parentId,
                 ctx.projectId,
                 ctx.isRecurring
+            );
+
+            console.log(
+                "NEW TASK ORDER:",
+                order,
+                "parent:",
+                ctx.parentId
+            );
+
+            console.table(
+                Object.values(state.tasks)
+                    .filter(t =>
+                        t.parentId === ctx.parentId
+                    )
+                    .map(t => ({
+                        title: t.title,
+                        order: t.order,
+                        completed: t.completed,
+                        projectId: t.projectId,
+                        isRecurring: t.isRecurring
+                    }))
             );
 
             const completed =
@@ -2802,8 +2825,8 @@
 
         const siblings = Object.values(state.tasks)
             .filter(t =>
-                t.parentId === dragged.parentId &&
-                t.projectId === dragged.projectId &&
+                sameNullable(t.parentId, dragged.parentId) &&
+                sameNullable(t.projectId, dragged.projectId) &&
                 t.isRecurring === dragged.isRecurring
             )
             .sort((a, b) => a.order - b.order);
@@ -2842,7 +2865,6 @@
             rowA.dataset.projectId === rowB.dataset.projectId &&
             rowA.dataset.recurring === rowB.dataset.recurring
         );
-
     }
 
     function isDescendant(parentId, childId) {
