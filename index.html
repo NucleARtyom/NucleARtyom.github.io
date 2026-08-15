@@ -2515,19 +2515,20 @@
         } = await client.auth.getSession();
 
         if (session) {
+            const loginScreen =
+                document.getElementById("loginScreen");
 
-            document.getElementById("loginScreen").style.display = "none";
+            if (loginScreen)
+                loginScreen.remove();
+
             document.getElementById("app").style.display = "flex";
 
             await loadState();
 
         } else {
-
             document.getElementById("loginScreen").style.display = "flex";
             document.getElementById("app").style.display = "none";
-
         }
-
     }
 
     async function login() {
