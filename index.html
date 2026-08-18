@@ -1904,6 +1904,7 @@
           <div class="tabs-mini">
             <button class="tab-mini active" id="tabSingle" onclick="switchAddTab('single')">Обычная</button>
             <button class="tab-mini" id="tabBulk" onclick="switchAddTab('bulk')">Несколько</button>
+            <button class="tab-mini" id="tabList" onclick="switchAddTab('list')">Списком</button>
             <button class="tab-mini" id="tabJson" onclick="switchAddTab('json')">Из JSON</button>
           </div>
 <div class="checkbox-line">
@@ -1931,6 +1932,15 @@
             <div class="hint">Создаст «Проверка 1», «Проверка 2» и т.д.</div>
           </div>
 
+          <div id="paneList" style="display:none;">
+            <div class="field">
+              <label>Список заданий</label>
+              <textarea id="listInput"
+                        placeholder="Одно задание на строку&#10;Ещё одно задание&#10;И ещё одно"></textarea>
+            </div>
+            <div class="hint">Каждая непустая строка будет добавлена как отдельное задание.</div>
+          </div>
+
           <div id="paneJson" style="display:none;">
             <div class="field">
               <label>JSON дерева заданий</label>
@@ -1954,12 +1964,27 @@
 
     function switchAddTab(tab) {
         addTab = tab;
-        document.getElementById('paneSingle').style.display = tab === 'single' ? 'block' : 'none';
-        document.getElementById('paneBulk').style.display = tab === 'bulk' ? 'block' : 'none';
-        document.getElementById('paneJson').style.display = tab === 'json' ? 'block' : 'none';
+
+        document.getElementById('paneSingle').style.display =
+            tab === 'single' ? 'block' : 'none';
+
+        document.getElementById('paneBulk').style.display =
+            tab === 'bulk' ? 'block' : 'none';
+
+        document.getElementById('paneList').style.display =
+            tab === 'list' ? 'block' : 'none';
+
+        document.getElementById('paneJson').style.display =
+            tab === 'json' ? 'block' : 'none';
+
         document.getElementById('tabSingle').classList.toggle('active', tab === 'single');
         document.getElementById('tabBulk').classList.toggle('active', tab === 'bulk');
+        document.getElementById('tabList').classList.toggle('active', tab === 'list');
         document.getElementById('tabJson').classList.toggle('active', tab === 'json');
+
+        if (tab === 'list') {
+            document.getElementById('listInput').focus();
+        }
     }
 
     function makeTask(title, ctx, order, completed = false) {
@@ -2106,6 +2131,47 @@
 
                 }
             }
+
+        } else if (addTab === 'list') {
+
+            const titles = document.getElementById('listInput').value
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean);
+
+            if (!titles.length) {
+                alert('Введите хотя бы одно задание.');
+                return;
+            }
+
+            let order = nextSiblingOrder(
+                ctx.parentId,
+                ctx.projectId,
+                ctx.isRecurring
+            );
+
+            const completed =
+                document.getElementById('taskCompleted').checked;
+
+            titles.forEach(title => {
+
+                const t = makeTask(
+                    title,
+                    ctx,
+                    order++,
+                    completed
+                );
+
+                state.tasks[t.id] = t;
+
+                if (completed) {
+                    state.completions.push({
+                        id: uid(),
+                        taskId: t.id,
+                        date: todayStr()
+                    });
+                }
+            });
 
         } else if (addTab === 'json') {
             const raw = document.getElementById('jsonInput').value.trim();
